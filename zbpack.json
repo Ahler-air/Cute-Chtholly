@@ -1,6 +1,8 @@
 {
   "build": {
-    "command": "npm install && npm run build",
-    "output": "dist"
+    "command": "npm install && npm run build"
+  },
+  "server": {
+    "command": "npm run start"
   }
 }
