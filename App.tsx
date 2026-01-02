@@ -143,6 +143,12 @@ const App: React.FC = () => {
         aptitude: Math.floor(Math.random() * 40 + 60),
         level: Math.floor(Math.random() * 10 + 5)
       };
+      
+      // Difficulty Balance: Buff Normal mode subjects
+      if (selectedDifficulty === 'NORMAL') {
+          rolledSubjects[k].aptitude += 15; // Higher aptitude means easier scaling
+          rolledSubjects[k].level += 5;     // Higher base level
+      }
     });
 
     let initialGeneral = { ...INITIAL_GENERAL };
@@ -163,11 +169,6 @@ const App: React.FC = () => {
 
     const firstEvent = PHASE_EVENTS[Phase.SUMMER].find(e => e.id === 'sum_goal_selection');
     
-    // Achievement is only for Reality, check triggers inside unlockAchievement, but we can trigger first_blood here
-    // The unlockAchievement function inside setState handles the check, but we can't call it before setState initializes properly in this sync block.
-    // Instead, we queue it via log or just handle it inside first week logic. 
-    // Actually, calling it after setState is fine.
-
     setState(prev => ({
       ...prev,
       phase: Phase.SUMMER,
@@ -186,9 +187,6 @@ const App: React.FC = () => {
     }));
     
     setView('GAME');
-    
-    // Delayed unlock to ensure state update (conceptually) - though setState updater is better
-    // For first_blood, we just trigger it. logic will check difficulty.
     setTimeout(() => unlockAchievement('first_blood'), 100);
   };
 
@@ -211,7 +209,9 @@ const App: React.FC = () => {
           }
           
           if (prev.general.money >= 200) unlockAchievement('rich');
+          if (prev.general.money <= -100) unlockAchievement('in_debt');
           if (prev.general.health < 10 && prev.phase === Phase.SEMESTER_1) unlockAchievement('survival');
+          if (prev.general.romance >= 95) unlockAchievement('romance_master');
 
           // Logic to Determine Next State
           let nextPhase = prev.phase;
@@ -309,6 +309,11 @@ const App: React.FC = () => {
                   eventsToAdd.push(gala);
               }
           }
+          
+          // Debt Collection Event (Priority)
+          if (updatedGeneral.money < -100 && Math.random() < 0.3) {
+             eventsToAdd.unshift(BASE_EVENTS['debt_collection']);
+          }
 
           // D. Phase specific random events (Summer/Military)
           const phaseEvents = PHASE_EVENTS[nextPhase] || [];
@@ -385,7 +390,8 @@ const App: React.FC = () => {
         }
         
         // No chain, clear current, effect will pick up next in queue
-        return { ...s, currentEvent: null, eventResult: null };
+        // AUTO-RESUME Logic: Set isPlaying to true after event
+        return { ...s, currentEvent: null, eventResult: null, isPlaying: true };
     });
   };
 
@@ -681,7 +687,12 @@ const App: React.FC = () => {
                           <h2 className="text-xl md:text-2xl font-black text-slate-800">{state.currentEvent.title}</h2>
                           {state.eventQueue.length > 0 && <span className="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-1 rounded-full whitespace-nowrap">+{state.eventQueue.length} 更多</span>}
                       </div>
-                      <p className="text-slate-600 mb-8 text-base md:text-lg leading-relaxed">{state.currentEvent.description}</p>
+                      {/* FIXED: Handle dynamic description text */}
+                      <p className="text-slate-600 mb-8 text-base md:text-lg leading-relaxed">
+                          {typeof state.currentEvent.description === 'function' 
+                            ? state.currentEvent.description(state) 
+                            : state.currentEvent.description}
+                      </p>
                       <div className="space-y-3">
                          {state.currentEvent.choices?.map((c, i) => (
                            <button key={i} onClick={() => handleChoice(c)} className="w-full text-left p-4 rounded-2xl bg-slate-50 hover:bg-indigo-600 hover:text-white border border-slate-200 transition-all font-bold group flex justify-between items-center">
