@@ -51,6 +51,8 @@ export interface CompetitionResultData {
 
 // --- New Features Interfaces ---
 
+export type Difficulty = 'CUSTOM' | 'NORMAL' | 'HARD' | 'REALITY';
+
 export interface Achievement {
   id: string;
   title: string;
@@ -102,6 +104,7 @@ export interface GameState {
   activeStatuses: GameStatus[];
   unlockedAchievements: string[]; // IDs only
   achievementPopup: Achievement | null; // For toast notification
+  difficulty: Difficulty;
 }
 
 export interface GameLogEntry {
