@@ -77,6 +77,10 @@ const ExamView: React.FC<ExamViewProps> = ({ title, state, onFinish }) => {
       return () => clearTimeout(timer);
     } else if (!isFinished) {
       setIsFinished(true);
+    }
+  }, [examStep, state, currentScores, isFinished, subjectsToTest]);
+
+  const handleFinishConfirm = () => {
       const total = Object.values(currentScores).reduce((a: number, b: number) => a + b, 0);
       
       let comment = "继续努力。";
@@ -88,7 +92,7 @@ const ExamView: React.FC<ExamViewProps> = ({ title, state, onFinish }) => {
           // 普通考试评价
           const maxTotal = subjectsToTest.reduce((acc, s) => acc + (['chinese', 'math', 'english'].includes(s) ? 150 : 100), 0);
           const ratio = total / maxTotal;
-          if (ratio > 0.90) comment = "傲视群雄，你是八中的明日之星！"; // Raised threshold
+          if (ratio > 0.90) comment = "傲视群雄，你是八中的明日之星！"; 
           else if (ratio > 0.80) comment = "表现稳健，保持在这个梯队。";
           else if (ratio > 0.65) comment = "中规中矩，还有提升空间。";
           else comment = "基础不牢，地动山摇。";
@@ -100,8 +104,7 @@ const ExamView: React.FC<ExamViewProps> = ({ title, state, onFinish }) => {
         totalScore: total,
         comment
       });
-    }
-  }, [examStep, state, currentScores, isFinished, onFinish, title]);
+  };
 
   return (
     <div className="bg-slate-900 rounded-3xl p-8 text-white h-full flex flex-col shadow-2xl overflow-hidden relative">
@@ -113,7 +116,7 @@ const ExamView: React.FC<ExamViewProps> = ({ title, state, onFinish }) => {
           {title}
         </h2>
         <div className="px-4 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-sm font-mono">
-          STATUS: IN_PROGRESS
+          STATUS: {isFinished ? 'COMPLETED' : 'IN_PROGRESS'}
         </div>
       </div>
 
@@ -135,7 +138,7 @@ const ExamView: React.FC<ExamViewProps> = ({ title, state, onFinish }) => {
         )}
       </div>
 
-      <div className="mt-8 grid grid-cols-3 md:grid-cols-6 gap-4">
+      <div className="mt-8 grid grid-cols-3 md:grid-cols-6 gap-4 mb-8">
         {subjectsToTest.map((sub, idx) => (
           <div key={sub} className="bg-slate-800 rounded-xl p-3 border border-slate-700">
             <div className="text-[10px] text-slate-500 uppercase">
@@ -145,6 +148,12 @@ const ExamView: React.FC<ExamViewProps> = ({ title, state, onFinish }) => {
           </div>
         ))}
       </div>
+      
+      {isFinished && (
+          <button onClick={handleFinishConfirm} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-black text-lg shadow-xl transition-all animate-fadeIn flex items-center justify-center gap-2">
+              查看排名 / 继续 <i className="fas fa-arrow-right"></i>
+          </button>
+      )}
     </div>
   );
 };
