@@ -692,7 +692,7 @@ const App: React.FC = () => {
               competitionResults: newHistory,
               phase: Phase.SEMESTER_1,
               isPlaying: true, // Resume play after popup
-              log: [...prev.log, { message: "竞赛征程暂时告一段落。", type: 'success', timestamp: Date.now() }]
+              log: [...prev.log, { message: "竞赛征程告一段落。", type: 'success', timestamp: Date.now() }]
           };
       });
   };
@@ -708,6 +708,74 @@ const App: React.FC = () => {
           default: return "考试";
       }
   };
+
+  // Helper for Ending Calculation
+  const getEndingAnalysis = () => {
+      const { general, examResult, activeStatuses, sleepCount, competitionResults, competition, unlockedAchievements } = state;
+      let title = "普通高中生";
+      let rank = "B";
+      let comment = "你的高中生活波澜不惊。";
+      let score = 0;
+
+      // Base Score
+      score += general.mindset + general.health + general.experience + general.luck + general.romance + general.efficiency * 5;
+      score += unlockedAchievements.length * 50;
+
+      // Determine Rank & Title
+      if (state.phase === Phase.WITHDRAWAL) {
+          rank = "F";
+          title = "遗憾离场";
+          comment = "虽然这次不得不停下脚步，但健康永远是第一位的。养好身体，未来还有无限可能。";
+      } else {
+          // Normal Ending Logic
+          if (competition === 'OI') {
+             const noip = competitionResults.find(r => r.title.includes('NOIP'));
+             if (noip && noip.award.includes('一等奖')) {
+                 rank = "SSS";
+                 title = "OI大神";
+                 comment = "你在信息学竞赛中展现了惊人的天赋，清北的校门正向你敞开！";
+                 score += 1000;
+             } else if (noip && noip.award.includes('二等奖')) {
+                 rank = "A";
+                 title = "竞赛强手";
+                 comment = "虽然离省一仅一步之遥，但你的实力已经超越了绝大多数人。";
+                 score += 500;
+             }
+          }
+
+          // Override if Academic God
+          if (examResult?.rank && examResult.rank <= 3) {
+              rank = "SSS";
+              title = "全能卷王";
+              comment = `期末考年级第 ${examResult.rank} 名！你是八中当之无愧的传说，老师口中的“那个学生”。`;
+              score += 1000;
+          } else if (examResult?.rank && examResult.rank <= 50) {
+              if (rank !== "SSS") {
+                  rank = "S";
+                  title = "名校预备";
+                  comment = "成绩优异，只要保持下去，985高校稳稳的。";
+                  score += 600;
+              }
+          }
+
+          // Special Titles
+          if (general.romance > 90 && state.romancePartner) {
+              title = "现充赢家";
+              comment = `不仅成绩不错，还收获了与 ${state.romancePartner} 的甜蜜爱情，真是让人嫉妒啊。`;
+              score += 300;
+          } else if (general.money < -100) {
+              title = "负债累累";
+              comment = "虽然学业完成了，但你的经济状况令人担忧...";
+          } else if (sleepCount > 20) {
+              title = "八中睡神";
+              comment = `一个学期睡了 ${sleepCount} 次，竟然还能顺利结业，这也是一种天赋。`;
+          }
+      }
+      
+      return { rank, title, comment, score };
+  };
+
+  const endingData = (state.phase === Phase.ENDING || state.phase === Phase.WITHDRAWAL) ? getEndingAnalysis() : null;
 
   // --- HOME VIEW (Redesigned) ---
   if (view === 'HOME') {
@@ -1072,41 +1140,104 @@ const App: React.FC = () => {
              </div>
         )}
 
-        {/* Final Settlement Overlay */}
-        {(state.phase === Phase.ENDING || state.phase === Phase.WITHDRAWAL) && (
-            <div className="absolute inset-0 z-50 bg-slate-900 text-white flex flex-col items-center justify-center p-4 md:p-10 animate-fadeIn overflow-y-auto">
-                <h1 className="text-3xl md:text-4xl font-black mb-4 md:mb-6 tracking-tight text-center mt-10 md:mt-0">
-                    {state.phase === Phase.WITHDRAWAL ? '被迫休学' : '模拟结束'}
-                </h1>
-                <p className="text-lg md:text-xl mb-6 md:mb-10 text-slate-300 text-center max-w-xl">
-                    {state.phase === Phase.WITHDRAWAL ? "由于身体或心理状况无法支撑高强度的学习生活，你不得不办理了休学手续。身体是革命的本钱，养好身体再出发吧。" : "你完成了北京八中高一上学期的全部挑战。这是一段难忘的旅程。"}
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full max-w-3xl mb-10">
-                    <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
-                        <h3 className="text-slate-400 font-bold mb-4 uppercase text-xs tracking-widest border-b border-slate-700 pb-2">最终属性</h3>
-                        <div className="space-y-3 font-mono text-sm">
-                            <div className="flex justify-between"><span>心态</span><span className={state.general.mindset > 80 ? 'text-emerald-400' : 'text-indigo-400'}>{state.general.mindset.toFixed(0)}</span></div>
-                            <div className="flex justify-between"><span>健康</span><span className={state.general.health > 80 ? 'text-emerald-400' : state.general.health < 30 ? 'text-rose-400' : 'text-indigo-400'}>{state.general.health.toFixed(0)}</span></div>
-                            <div className="flex justify-between"><span>金钱</span><span className="text-yellow-400">{state.general.money.toFixed(0)}</span></div>
-                            <div className="flex justify-between"><span>综合效率</span><span className="text-blue-400">{state.general.efficiency.toFixed(0)}</span></div>
+        {/* Final Settlement Overlay - IMPROVED UI */}
+        {(state.phase === Phase.ENDING || state.phase === Phase.WITHDRAWAL) && endingData && (
+            <div className="absolute inset-0 z-50 bg-slate-900/95 backdrop-blur-md text-slate-800 flex flex-col items-center justify-center p-4 md:p-6 animate-fadeIn overflow-y-auto">
+                <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl flex flex-col md:flex-row overflow-hidden border-4 border-slate-800 relative">
+                    
+                    {/* Rank Stamp */}
+                    <div className="absolute top-0 right-0 z-20 pointer-events-none transform translate-x-1/4 -translate-y-1/4 md:translate-x-0 md:-translate-y-0 md:top-6 md:right-6">
+                        <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-8 border-red-600 flex items-center justify-center rotate-12 opacity-80 animate-pulse bg-white/10 backdrop-blur-sm shadow-xl">
+                            <span className="text-6xl md:text-8xl font-black text-red-600 tracking-tighter">{endingData.rank}</span>
                         </div>
                     </div>
-                     <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
-                        <h3 className="text-slate-400 font-bold mb-4 uppercase text-xs tracking-widest border-b border-slate-700 pb-2">学业成就</h3>
-                        <div className="space-y-3 text-sm">
-                             <div className="flex justify-between"><span>最终班级</span><span className="font-bold">{state.className}</span></div>
-                             <div className="flex justify-between"><span>选择竞赛</span><span className="font-bold">{state.competition}</span></div>
-                             <div className="flex justify-between"><span>解锁成就</span><span className="text-yellow-400 font-bold">{state.unlockedAchievements.length} 个</span></div>
-                             <div className="flex justify-between"><span>游戏难度</span><span className="text-orange-400 font-bold text-xs border border-orange-500/50 px-1 rounded">{state.difficulty}</span></div>
-                             {state.examResult?.rank && <div className="flex justify-between"><span>最终排名</span><span className="text-indigo-400 font-bold">#{state.examResult.rank} / {state.examResult.totalStudents}</span></div>}
+
+                    {/* Left Column: Stats & Profile */}
+                    <div className="flex-1 p-8 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200">
+                         <div className="flex items-center gap-4 mb-8">
+                             <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-4xl shadow-lg flex-shrink-0">
+                                <i className="fas fa-user-graduate"></i>
+                             </div>
+                             <div>
+                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">八中生涯档案</div>
+                                 <h2 className="text-3xl font-black text-slate-900 leading-tight">{endingData.title}</h2>
+                                 <div className="text-sm font-bold text-indigo-600 mt-1">{state.className}</div>
+                             </div>
+                         </div>
+                         
+                         <p className="text-slate-600 italic mb-8 border-l-4 border-indigo-200 pl-4 py-1">
+                             "{endingData.comment}"
+                         </p>
+
+                         {/* Stats Grid */}
+                         <div className="space-y-4">
+                             <h3 className="font-black text-slate-400 uppercase text-xs">综合能力评估</h3>
+                             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                                 {/* Simple Stat Bars */}
+                                 {[
+                                     { label: '心态', val: state.general.mindset, max: 100, color: 'bg-blue-500' },
+                                     { label: '健康', val: state.general.health, max: 100, color: 'bg-emerald-500' },
+                                     { label: '效率', val: state.general.efficiency * 5, max: 100, color: 'bg-purple-500' },
+                                     { label: '魅力', val: state.general.romance, max: 100, color: 'bg-rose-500' },
+                                     { label: 'OI实力', val: (state.oiStats.dp + state.oiStats.ds + state.oiStats.math + state.oiStats.string + state.oiStats.graph + state.oiStats.misc) * 5, max: 100, color: 'bg-indigo-500' },
+                                     { label: '财富', val: Math.max(0, Math.min(100, state.general.money / 5)), max: 100, color: 'bg-yellow-500' },
+                                 ].map((stat, i) => (
+                                     <div key={i} className="flex flex-col gap-1">
+                                         <div className="flex justify-between text-xs font-bold text-slate-600">
+                                             <span>{stat.label}</span>
+                                             <span>{stat.val > 100 ? 'MAX' : Math.floor(stat.val)}</span>
+                                         </div>
+                                         <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                             <div className={`h-full ${stat.color} transition-all duration-1000`} style={{ width: `${Math.min(100, stat.val)}%` }}></div>
+                                         </div>
+                                     </div>
+                                 ))}
+                             </div>
+                         </div>
+                    </div>
+
+                    {/* Right Column: Highlights & Achievements */}
+                    <div className="flex-1 p-8 flex flex-col bg-white">
+                        <div className="flex-1">
+                            <h3 className="font-black text-slate-400 uppercase text-xs mb-4">学期高光时刻</h3>
+                            <div className="space-y-4 relative">
+                                <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-slate-100"></div>
+                                {state.history.slice(0, 4).map((h, i) => (
+                                    <div key={i} className="flex gap-4 relative">
+                                        <div className="w-4 h-4 rounded-full bg-white border-4 border-indigo-500 flex-shrink-0 z-10"></div>
+                                        <div>
+                                            <div className="text-[10px] font-bold text-indigo-400 uppercase">{h.phase}</div>
+                                            <div className="text-sm font-bold text-slate-800">{h.eventTitle}</div>
+                                            <div className="text-xs text-slate-500">{h.resultSummary}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                             <div className="flex justify-between items-end mb-4">
+                                 <div>
+                                     <div className="text-xs font-bold text-slate-400 uppercase">本局成就</div>
+                                     <div className="text-2xl font-black text-slate-800">{state.unlockedAchievements.length} 个</div>
+                                 </div>
+                                 <div className="text-right">
+                                     <div className="text-xs font-bold text-slate-400 uppercase">最终得分</div>
+                                     <div className="text-4xl font-black text-indigo-600">{Math.floor(endingData.score)}</div>
+                                 </div>
+                             </div>
+                             
+                             <div className="flex gap-3">
+                                 <button onClick={() => setView('HOME')} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black text-lg hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
+                                     <i className="fas fa-redo-alt mr-2"></i> 再来一年
+                                 </button>
+                                 <button onClick={() => setShowHistory(true)} className="px-6 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-colors">
+                                     <i className="fas fa-history"></i>
+                                 </button>
+                             </div>
                         </div>
                     </div>
                 </div>
-
-                <button onClick={() => setView('HOME')} className="bg-white text-slate-900 px-12 py-4 rounded-full font-black text-lg hover:scale-105 transition-transform shadow-lg hover:shadow-white/20 mb-10">
-                    <i className="fas fa-redo mr-2"></i> 重开模拟
-                </button>
             </div>
         )}
 
