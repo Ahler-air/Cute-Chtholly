@@ -105,6 +105,24 @@ export interface WeekendActivity {
     action: (state: GameState) => Partial<GameState>;
 }
 
+export interface Talent {
+    id: string;
+    name: string;
+    description: string;
+    rarity: 'common' | 'rare' | 'legendary' | 'mythical' | 'cursed';
+    cost: number; // Cost in talent points. Negative means it gives points.
+    effect?: (state: GameState) => Partial<GameState>; // Initial effect applied at start
+}
+
+export interface Item {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    icon: string;
+    effect: (state: GameState) => Partial<GameState>;
+}
+
 // ------------------------------
 
 export interface GameState {
@@ -150,6 +168,10 @@ export interface GameState {
   
   // Stats for Achievements
   sleepCount: number;
+
+  // New Feature States
+  talents: Talent[];
+  inventory: string[]; // List of Item IDs
 }
 
 export interface GameLogEntry {
