@@ -134,6 +134,7 @@ export interface GameState {
   totalWeeksInPhase: number;
   subjects: Record<SubjectKey, SubjectStats>;
   general: GeneralStats;
+  initialGeneral: GeneralStats; // NEW: Stores the baseline stats for regression
   oiStats: OIStats; // New OI Stats
   
   selectedSubjects: SubjectKey[];
@@ -151,6 +152,7 @@ export interface GameState {
   midtermRank: number | null; // New: Stores midterm rank for ending analysis
   competitionResults: Array<CompetitionResultData>;
   popupCompetitionResult: CompetitionResultData | null;
+  popupExamResult: (ExamResult & { nextPhase?: Phase }) | null;
   triggeredEvents: string[]; 
   isSick: boolean;
   isGrounded: boolean;

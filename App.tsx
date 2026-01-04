@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Phase, GameState, GameEvent, SubjectKey, ExamResult, SubjectStats, GeneralStats, SUBJECT_NAMES, CompetitionResultData, GameStatus, Difficulty, ClubId, WeekendActivity, OIStats, GameLogEntry, Talent, Item } from './types';
 import { DIFFICULTY_PRESETS } from './data/constants';
 import { TALENTS, SHOP_ITEMS, ACHIEVEMENTS, STATUSES, CLUBS, WEEKEND_ACTIVITIES } from './data/mechanics';
@@ -12,6 +13,7 @@ import TalentView from './components/TalentView';
 import EndingScreen from './components/EndingScreen';
 import EventModal from './components/EventModal';
 import FloatingTextLayer, { FloatingTextItem } from './components/FloatingTextLayer';
+import RealityGuideModal from './components/RealityGuideModal';
 
 // --- Constants & Helpers ---
 
@@ -60,6 +62,7 @@ const getInitialGameState = (): GameState => ({
     totalWeeksInPhase: 0,
     subjects: getInitialSubjects(),
     general: getInitialGeneral(),
+    initialGeneral: getInitialGeneral(),
     oiStats: getInitialOIStats(),
     selectedSubjects: [],
     competition: 'None',
@@ -75,6 +78,7 @@ const getInitialGameState = (): GameState => ({
     midtermRank: null, // Initial value
     competitionResults: [],
     popupCompetitionResult: null,
+    popupExamResult: null,
     triggeredEvents: [],
     isSick: false,
     isGrounded: false,
@@ -97,6 +101,7 @@ const App: React.FC = () => {
   const [customStats, setCustomStats] = useState<GeneralStats>(getInitialGeneral());
   const [showClubSelection, setShowClubSelection] = useState(false); // UI State for club modal
   const [showShop, setShowShop] = useState(false); // UI State for shop
+  const [showRealityGuide, setShowRealityGuide] = useState(false); // UI State for Reality Guide
   
   // Game State
   const [state, setState] = useState<GameState>(getInitialGameState());
@@ -119,6 +124,43 @@ const App: React.FC = () => {
       resultText: string;
       newState: GameState;
   } | null>(null);
+
+  // --- Dynamic Weekend Options (Reality Mode Logic) ---
+  const weekendOptions = useMemo(() => {
+    if (!state.isWeekend) return [];
+
+    // 1. Filter basic eligibility conditions first
+    let candidates = WEEKEND_ACTIVITIES.filter(a => !a.condition || a.condition(state));
+
+    // 2. Logic for REALITY mode
+    if (state.difficulty === 'REALITY') {
+        // Mandatory Types (Story/Main lines)
+        const mandatory = candidates.filter(a => a.type === 'LOVE' || a.type === 'OI');
+        let pool = candidates.filter(a => a.type !== 'LOVE' && a.type !== 'OI');
+
+        // Condition: Hard to study if stats are bad
+        if (state.general.health < 30 || state.general.mindset < 30 || state.general.efficiency < 0) {
+            // Remove STUDY activities from the pool (hard filter)
+            pool = pool.filter(a => a.type !== 'STUDY');
+        }
+
+        // Shuffle the pool
+        pool = pool.sort(() => 0.5 - Math.random());
+
+        // Fill remaining slots up to 6 total (Mandatory + Random)
+        const slotsNeeded = Math.max(0, 6 - mandatory.length);
+        const selectedPool = pool.slice(0, slotsNeeded);
+
+        candidates = [...mandatory, ...selectedPool];
+    }
+
+    // 3. Sort for display (Love/OI first, then others)
+    return candidates.sort((a, b) => {
+         const aPriority = (a.type === 'LOVE' || a.type === 'OI') ? 1 : 0;
+         const bPriority = (b.type === 'LOVE' || b.type === 'OI') ? 1 : 0;
+         return bPriority - aPriority;
+    });
+  }, [state.isWeekend, state.week, state.difficulty, state.general, state.romancePartner, state.competition]);
 
 
   useEffect(() => {
@@ -247,6 +289,7 @@ const App: React.FC = () => {
       // 1. Reset UI
       setWeekendResult(null);
       setShowClubSelection(false);
+      setShowRealityGuide(false);
       
       // 2. Roll Random Talents
       // Ensure we get a mix of good and bad
@@ -306,6 +349,7 @@ const App: React.FC = () => {
         ...getInitialGameState(),
         subjects: rolledSubjects,
         general: initialGeneral,
+        initialGeneral: { ...initialGeneral },
         activeStatuses: initialStatuses,
         talents: selectedTalents,
         oiStats: getInitialOIStats(),
@@ -399,8 +443,8 @@ const App: React.FC = () => {
           if (prev.general.money >= 200) unlockAchievement('rich');
           if (prev.general.money <= -250) unlockAchievement('in_debt');
           if (prev.general.health < 10 && prev.phase === Phase.SEMESTER_1) unlockAchievement('survival');
-          // Update Romance Master requirement to 250
-          if (prev.general.romance >= 250) unlockAchievement('romance_master');
+          // Update Romance Master requirement to 150
+          if (prev.general.romance >= 150) unlockAchievement('romance_master');
 
           // Logic to Determine Next State
           let nextPhase = prev.phase;
@@ -539,13 +583,13 @@ const App: React.FC = () => {
 
           // Apply Status Effects
           activeStatuses.forEach(s => {
-              if (s.id === 'anxious') nextGeneral.mindset -= 2;
-              if (s.id === 'exhausted') nextGeneral.health -= 2;
-              if (s.id === 'focused') nextGeneral.efficiency += 2;
-              if (s.id === 'in_love') nextGeneral.mindset += 5;
-              if (s.id === 'debt') { nextGeneral.mindset -= 5; nextGeneral.romance -= 3; }
-              if (s.id === 'crush_pending') { nextGeneral.luck += 2; nextGeneral.experience += 2; }
-              if (s.id === 'crush') { nextGeneral.efficiency -= 2; nextGeneral.romance += 2; }
+              if (s.id === 'anxious') nextGeneral.mindset -= 1.5;
+              if (s.id === 'exhausted') nextGeneral.health -= 1.5;
+              if (s.id === 'focused') nextGeneral.efficiency += 0.5;
+              if (s.id === 'in_love') nextGeneral.mindset += 2;
+              if (s.id === 'debt') { nextGeneral.mindset -= 2; nextGeneral.romance -= 0.5; }
+              if (s.id === 'crush_pending') { nextGeneral.luck += 0.5; nextGeneral.experience += 0.5; }
+              if (s.id === 'crush') { nextGeneral.efficiency -= 0.4; nextGeneral.romance += 0.5; }
           });
 
           // 2. Generate Events for this week
@@ -948,6 +992,9 @@ const App: React.FC = () => {
       {/* FLOATING TEXT LAYER */}
       <FloatingTextLayer items={floatingTexts} />
 
+      {/* Reality Guide Modal */}
+      {showRealityGuide && <RealityGuideModal onClose={() => setShowRealityGuide(false)} />}
+
       {/* Toast */}
       {state.achievementPopup && (
           <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[60] bg-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-fadeIn border border-slate-700">
@@ -961,7 +1008,7 @@ const App: React.FC = () => {
 
       {/* Sidebar: Stacked on mobile, Side on desktop */}
       <aside className="w-full md:w-80 flex-shrink-0 flex flex-col gap-2 md:gap-4 max-h-[30vh] md:max-h-full overflow-y-auto md:overflow-visible">
-          <StatsPanel state={state} />
+          <StatsPanel state={state} onShowGuide={() => setShowRealityGuide(true)} />
           <div className="hidden md:grid grid-cols-2 gap-2">
             <button onClick={() => setShowShop(true)} className="bg-white border border-slate-200 p-3 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center font-bold text-slate-600">
                  <i className="fas fa-store text-emerald-500 mb-1"></i><span className="text-xs">小卖部</span>
@@ -1054,14 +1101,10 @@ const App: React.FC = () => {
                           剩余行动点: {state.weekendActionPoints}
                       </div>
                   </div>
-                  <p className="text-slate-500 mb-6">难得的周末，你想怎么度过？</p>
+                  <p className="text-slate-500 mb-6">难得的周末，你想怎么度过？{state.difficulty === 'REALITY' && <span className="text-rose-500 text-xs ml-2 font-bold">(现实模式下部分活动受状态限制)</span>}</p>
                   <div className="space-y-3">
-                     {[...WEEKEND_ACTIVITIES].sort((a, b) => {
-                         // Sort LOVE and OI to top
-                         const aPriority = (a.type === 'LOVE' || a.type === 'OI') ? 1 : 0;
-                         const bPriority = (b.type === 'LOVE' || b.type === 'OI') ? 1 : 0;
-                         return bPriority - aPriority;
-                     }).map(activity => {
+                     {weekendOptions.map(activity => {
+                         // Condition check is handled in useMemo, but we double check here just in case logic changes
                          if (activity.condition && !activity.condition(state)) return null;
                          return (
                              <button key={activity.id} onClick={(e) => handleWeekendActivityClick(activity, e)}

@@ -2,8 +2,16 @@
 import { Difficulty, GeneralStats } from '../types';
 
 export const CHANGELOG_DATA = [
+    { version: 'v1.1.0', date: '2026-1-4', content: ['我们调整了很多东西，请您自行游玩体验','此版本并不足够稳定，可能存在若干Bug'] },
     { version: 'v1.0.0/稳定', date: '2026-1-3', content: ['三月七好可爱', '珂朵莉好可爱', '风堇好可爱', '广告位招租'] }
 ];
+
+// --- Mechanic Constants ---
+export const MECHANICS_CONFIG = {
+    GENERAL_REGRESSION_RATE: 0.02, // 2% regression per week for general stats (towards baseline)
+    EFFICIENCY_REGRESSION_RATE: 0.05, // 5% regression per week for efficiency (harder to maintain high focus)
+    SUBJECT_DECAY_RATE: 0.01 // 1% natural forgetting per week for subjects
+};
 
 export const DIFFICULTY_PRESETS: Record<Exclude<Difficulty, 'CUSTOM'>, { label: string, desc: string, stats: GeneralStats, color: string }> = {
     'NORMAL': {

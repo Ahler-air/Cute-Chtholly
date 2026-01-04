@@ -83,14 +83,14 @@ export const SHOP_ITEMS: Item[] = [
 export const ACHIEVEMENTS: Record<string, Achievement> = {
     'first_blood': { id: 'first_blood', title: '初入八中', description: '成功开始你的高中生活。', icon: 'fa-school', rarity: 'common' },
     'nerd': { id: 'nerd', title: '卷王', description: '单科成绩达到满分。', icon: 'fa-book-reader', rarity: 'rare' },
-    'romance_master': { id: 'romance_master', title: '海王', description: '魅力值达到250以上。', icon: 'fa-heart', rarity: 'legendary' },
+    'romance_master': { id: 'romance_master', title: '海王', description: '虽然学校不允许……', icon: 'fa-heart', rarity: 'legendary' },
     'oi_god': { id: 'oi_god', title: '???', description: '获得五大竞赛省一。', icon: 'fa-code', rarity: 'legendary' },
     'survival': { id: 'survival', title: '极限生存', description: '在健康低于10的情况下完成一个学期。', icon: 'fa-notes-medical', rarity: 'rare' },
     'rich': { id: 'rich', title: '小金库', description: '持有金钱超过200。', icon: 'fa-coins', rarity: 'common' },
     'in_debt': { id: 'in_debt', title: '负债累累', description: '负债超过250。', icon: 'fa-file-invoice-dollar', rarity: 'common' },
-    'top_rank': { id: 'top_rank', title: '一览众山小', description: '在大型考试中获得年级第一。', icon: 'fa-crown', rarity: 'legendary' },
-    'bottom_rank': { id: 'bottom_rank', title: '旷世奇才', description: '在大型考试中获得年级倒数第一。', icon: 'fa-poop', rarity: 'rare' },
-    'sleep_god': { id: 'sleep_god', title: '睡神', description: '累计选择20次以上睡觉事件且获得年级前50。', icon: 'fa-bed', rarity: 'legendary' },
+    'top_rank': { id: 'top_rank', title: '一览众山小', description: '年级第一！（注：不确定该版本能否实现）', icon: 'fa-crown', rarity: 'legendary' },
+    'bottom_rank': { id: 'bottom_rank', title: '旷世奇才', description: '倒数第一，也是神人。', icon: 'fa-poop', rarity: 'rare' },
+    'sleep_god': { id: 'sleep_god', title: '睡神', description: '天天睡觉还考这么高，羡慕了。', icon: 'fa-bed', rarity: 'legendary' },
 };
 
 // --- Statuses ---
